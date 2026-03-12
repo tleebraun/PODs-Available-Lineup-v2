@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PODs/Available Lineup</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
+    body {
+      background-color: #f9f6f1;
+      color: #1a1a1a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      min-height: 100vh;
+    }
+    .app { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+
+    button, input, select, textarea { font: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 2px solid #1a7a6e;
+      outline-offset: 2px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    /* Top status */
+    .sync-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background-color: #ffffff;
+      border: 1px solid #e0d8cc;
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      flex-wrap: wrap;
+    }
+    .sync-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #c4bdb0;
+      flex-shrink: 0;
+      transition: background-color 0.3s;
+    }
+    .sync-dot.connected { background-color: #1a7a6e; }
+    .sync-dot.connecting { background-color: #b87d1a; animation: pulse 1s infinite; }
+    .sync-dot.error { background-color: #c0392b; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .sync-label { font-size: 11px; color: #8a8070; font-weight: 700; }
+    .sync-label.connected { color: #1a7a6e; }
+    .sync-label.connecting { color: #b87d1a; }
+    .sync-label.error { color: #c0392b; }
+    .sync-room {
+      font-size: 10px;
+      color: #8a8070;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      letter-spacing: 0.05em;
+    }
+    .sync-users, .status-pill {
+      font-size: 10px;
+      color: #8a8070;
+      background-color: #f3ede4;
+      border: 1px solid #e0d8cc;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .status-pill.live { color: #1a7a6e; border-color: rgba(26,122,110,0.25); background: rgba(26,122,110,0.08); }
+    .status-pill.local { color: #b87d1a; border-color: rgba(184,125,26,0.25); background: rgba(184,125,26,0.08); }
+    .status-pill.error { color: #c0392b; border-color: rgba(192,57,43,0.25); background: rgba(192,57,43,0.08); }
+
+    .top-actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+    .mini-btn {
+      background: none;
+      border: 1px solid #e0d8cc;
+      color: #8a8070;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .mini-btn:hover { border-color: #8a8070; color: #1a1a1a; background: #f3ede4; }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .brand-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #8a8070;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .brand-title {
+      font-size: 25px;
+      font-weight: 900;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+    }
+    .brand-title span.g { color: #1a7a6e; }
+    .brand-title span.b { color: #1a5f8a; }
+    .date-block {
+      text-align: right;
+      font-size: 11px;
+      color: #8a8070;
+      line-height: 1.5;
+      font-variant-numeric: tabular-nums;
+    }
+    .version-stamp {
+      margin-top: 4px;
+      font-size: 10px;
+      color: #b3a999;
+      font-weight: 700;
+    }
+
+    .mode-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-top: 6px;
+    }
+    .mode-badge.pods {
+      background: rgba(26,122,110,0.1);
+      border: 1px solid rgba(26,122,110,0.25);
+      color: #1a7a6e;
+    }
+    .mode-badge.avail {
+      background: rgba(26,95,138,0.1);
+      border: 1px solid rgba(26,95,138,0.25);
+      color: #1a5f8a;
+    }
+
+    .switch-btn {
+      background: none;
+      border: 1px solid #e0d8cc;
+      color: #8a8070;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .switch-btn:hover { border-color: #8a8070; color: #1a1a1a; }
+
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #8a8070;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e0d8cc;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .helper-text {
+      font-size: 11px;
+      color: #8a8070;
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+
+    /* Diagnostics */
+    .diag-panel {
+      margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .diag-header {
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 12px 14px;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #4a4a4a;
+    }
+    .diag-header:hover { background: #f9f6f1; }
+    .diag-body {
+      border-top: 1px solid #e0d8cc;
+      padding: 12px 14px 14px;
+      display: none;
+    }
+    .diag-grid {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 8px 10px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .diag-key { color: #8a8070; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; font-size: 10px; }
+    .diag-val { color: #1a1a1a; word-break: break-word; }
+    .diag-good { color: #1a7a6e; font-weight: 700; }
+    .diag-warn { color: #b87d1a; font-weight: 700; }
+    .diag-bad { color: #c0392b; font-weight: 700; }
+
+    /* Setup overlay */
+    .setup-overlay {
+      position: fixed;
+      inset: 0;
+      background: #f9f6f1;
+      z-index: 500;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 24px 16px 40px;
+      overflow-y: auto;
+    }
+    .setup-overlay.hidden { display: none; }
+    .setup-card {
+      background: #fff;
+      border: 1px solid #e0d8cc;
+      border-radius: 20px;
+      padding: 28px 24px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+      margin: auto;
+    }
+    .setup-logo {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
+    }
+    .setup-logo span { color: #1a7a6e; }
+    .setup-sub {
+      font-size: 13px;
+      color: #8a8070;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+    .setup-section { margin-bottom: 20px; }
+    .setup-section-title {
+      font-size: 12px;
+      font-weight: 900;
+      color: #1a1a1a;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .setup-section-num {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #1a7a6e;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .setup-instructions {
+      font-size: 12px;
+      color: #4a4a4a;
+      line-height: 1.6;
+      background: #f9f6f1;
+      border: 1px solid #e0d8cc;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .setup-field { margin-bottom: 10px; }
+    .setup-field label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 11px;
+      color: #4a4a4a;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .setup-input, .setup-room-input {
+      width: 100%;
+      background: #f9f6f1;
+      border: 1px solid #e0d8cc;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #1a1a1a;
+      font-size: 13px;
+      outline: none;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .setup-input:focus, .setup-room-input:focus { border-color: #1a7a6e; background: #fff; }
+    .setup-room-row { display: flex; gap: 8px; }
+    .gen-room-btn, .setup-offline-btn, .setup-connect-btn {
+      cursor: pointer;
+      border-radius: 10px;
+      font-weight: 800;
+    }
+    .gen-room-btn {
+      background: #f3ede4;
+      border: 1px solid #e0d8cc;
+      color: #4a4a4a;
+      font-size: 11px;
+      padding: 10px 14px;
+      white-space: nowrap;
+    }
+    .setup-connect-btn {
+      width: 100%;
+      padding: 14px;
+      background: #1a7a6e;
+      color: #fff;
+      border: none;
+      font-size: 15px;
+      margin-top: 8px;
+    }
+    .setup-connect-btn:hover { background: #15695e; }
+    .setup-connect-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .setup-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0;
+    }
+    .setup-divider-line { flex: 1; height: 1px; background: #e0d8cc; }
+    .setup-divider-text { font-size: 11px; color: #8a8070; font-weight: 700; }
+    .setup-offline-btn {
+      width: 100%;
+      padding: 12px;
+      background: #f3ede4;
+      border: 1px solid #e0d8cc;
+      color: #8a8070;
+      font-size: 13px;
+    }
+    .setup-error {
+      display: none;
+      background: rgba(192,57,43,0.08);
+      border: 1px solid rgba(192,57,43,0.28);
+      color: #c0392b;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    .setup-error.visible { display: block; }
+
+    /* Mode selector */
+    .mode-selector {
+      background: #ffffff;
+      border: 1px solid #e0d8cc;
+      border-radius: 16px;
+      padding: 30px 20px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .mode-selector-title { font-size: 18px; font-weight: 900; margin-bottom: 6px; }
+    .mode-selector-sub { font-size: 12px; color: #8a8070; margin-bottom: 24px; line-height: 1.5; }
+    .mode-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mode-btn {
+      padding: 22px 14px;
+      border-radius: 12px;
+      border: 1px solid #e0d8cc;
+      background: #f9f6f1;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.15s;
+    }
+    .mode-btn:hover { transform: translateY(-1px); }
+    .mode-btn.pods-btn:hover { border-color: #1a7a6e; background: #f0faf8; box-shadow: 0 4px 16px rgba(26,122,110,0.12); }
+    .mode-btn.avail-btn:hover { border-color: #1a5f8a; background: #f0f5fa; box-shadow: 0 4px 16px rgba(26,95,138,0.12); }
+    .mode-btn-icon { font-size: 22px; margin-bottom: 8px; }
+    .mode-btn-title { font-size: 13px; font-weight: 900; margin-bottom: 4px; }
+    .mode-btn-desc { font-size: 11px; color: #8a8070; line-height: 1.4; }
+
+    /* Common warnings */
+    .coverage-warn {
+      background: rgba(192,57,43,0.07);
+      border: 1px solid rgba(192,57,43,0.28);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: #c0392b;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .coverage-warn.visible { display: flex; }
+
+    .summary-bar {
+      background: #ffffff;
+      border: 1px solid #e0d8cc;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      flex-wrap: wrap;
+    }
+    .summary-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #8a8070;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .summary-name { font-size: 18px; font-weight: 900; color: #1a7a6e; flex: 1; min-width: 120px; }
+    .summary-meta { font-size: 13px; color: #8a8070; font-weight: 700; white-space: nowrap; }
+    .summary-name.avail { color: #1a5f8a; }
+
+    .timer-section {
+      background: #ffffff;
+      border: 1px solid #e0d8cc;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      flex-wrap: wrap;
+    }
+    .timer-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: #8a8070;
+      text-transform: uppercase;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+    .timer-track { flex: 1; min-width: 120px; height: 6px; background: #e0d8cc; border-radius: 3px; overflow: hidden; }
+    .timer-fill { height: 100%; width: 100%; background: linear-gradient(90deg,#1a7a6e,#22a090); transition: width 1s linear; }
+    .timer-fill.warn { background: linear-gradient(90deg,#b87d1a,#d4941a); }
+    .timer-fill.danger { background: linear-gradient(90deg,#c0392b,#e04030); }
+    .timer-display {
+      font-size: 18px;
+      font-weight: 900;
+      color: #1a7a6e;
+      min-width: 56px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .timer-display.warn { color: #b87d1a; }
+    .timer-display.danger { color: #c0392b; }
+    .timer-btn {
+      background: #f3ede4;
+      border: 1px solid #e0d8cc;
+      color: #8a8070;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .timer-btn:hover { border-color: #1a7a6e; color: #1a7a6e; }
+
+    .manual-start-card {
+      background: #ffffff;
+      border: 1px solid #e0d8cc;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .manual-start-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .manual-start-label {
+      font-size: 10px;
+      font-weight: 800;
+      color: #8a8070;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      flex-shrink: 0;
+    }
+    .manual-start-input {
+      width: 90px;
+      background: #f9f6f1;
+      border: 1px solid #e0d8cc;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #1a1a1a;
+      outline: none;
+      text-align: center;
+    }
+    .manual-start-input:focus { border-color: #1a7a6e; background: #fff; }
+    .manual-start-btn {
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .manual-start-btn.primary { background: #1a1a1a; color: #fff; }
+    .manual-start-btn.primary:hover { background: #333; }
+    .manual-start-btn.secondary { background: #f3ede4; color: #8a8070; border: 1px solid #e0d8cc; }
+    .manual-start-btn.secondary:hover { border-color: #8a8070; color: #1a1a1a; }
+
+    .pause-banner {
+      background: rgba(184,125,26,0.12);
+      border: 1px solid rgba(184,125,26,0.3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #7a5200;
+      line-height: 1.45;
+    }
+
+<body>
+
+<div class="app-container">
+
+  <!-- TOP STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-left">
+      <span id="syncStatus">Sync: Checking...</span>
+      <span id="modeIndicator" class="mode-badge hidden"></span>
+    </div>
+
+    <div class="status-right">
+      <span id="versionStamp">Version 2026.03.12.1</span>
+      <span id="currentTime"></span>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <h1>CCMU1 Coverage</h1>
+    <h2 id="pageSubtitle">Lineup Manager</h2>
+  </header>
+
+
+  <!-- MODE SELECTOR -->
+  <section id="modeSelector" class="card">
+    <h3>What kind of day is it?</h3>
+
+    <div class="mode-buttons">
+      <button id="podsModeBtn" class="mode-btn pods">
+        PODs Day
+      </button>
+
+      <button id="availableModeBtn" class="mode-btn available">
+        Available Coverage
+      </button>
+    </div>
+  </section>
+
+
+  <!-- FRONT RN SUMMARY -->
+  <section id="frontSummary" class="card hidden">
+    <div class="front-row">
+      <div>
+        <strong>Up Front Now:</strong>
+        <span id="frontRNName">—</span>
+      </div>
+
+      <div>
+        <strong>Time left:</strong>
+        <span id="frontRNTime">--</span>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- TIMER CARD -->
+  <section id="timerCard" class="card hidden">
+    <div class="timer-header">
+      <span class="timer-label">Auto-rotate</span>
+      <span id="timerDisplay">30:00</span>
+    </div>
+
+    <div class="timer-controls">
+      <button id="pauseTimerBtn">Pause front RN</button>
+      <button id="resumeTimerBtn" class="hidden">Resume timer</button>
+      <button id="resetTimerBtn">Reset</button>
+    </div>
+
+    <div class="manual-start-row">
+      <label for="manualStartInput">Front RN started at</label>
+
+      <input
+        id="manualStartInput"
+        type="text"
+        placeholder="e.g. 8:47a"
+      />
+
+      <button id="setManualStartBtn">Set</button>
+      <button id="startNowBtn">Now</button>
+    </div>
+
+    <div class="manual-help">
+      Use when the current front RN started late, loaded late,
+      or was briefly unavailable.
+    </div>
+  </section>
+
+
+  <!-- LUNCH PLAN -->
+  <section id="lunchPlanCard" class="card hidden">
+    <h3>Lunch Plan</h3>
+
+    <div class="lunch-grid">
+
+      <div class="lunch-slot">
+        <div class="slot-time">~12:00</div>
+        <div id="lunchSlot1200" class="slot-name"></div>
+      </div>
+
+      <div class="lunch-slot">
+        <div class="slot-time">~12:15</div>
+        <div id="lunchSlot1215" class="slot-name"></div>
+      </div>
+
+      <div class="lunch-slot">
+        <div class="slot-time">~12:30</div>
+        <div id="lunchSlot1230" class="slot-name"></div>
+      </div>
+
+      <div class="lunch-slot">
+        <div class="slot-time">~12:45</div>
+        <div id="lunchSlot1245" class="slot-name"></div>
+      </div>
+
+      <div class="lunch-slot">
+        <div class="slot-time">~3:30</div>
+        <div id="lunchSlot330" class="slot-name"></div>
+      </div>
+
+    </div>
+  </section>
+
+
+  <!-- CURRENT LINEUP -->
+  <section id="lineupCard" class="card hidden">
+    <h3>Current Lineup</h3>
+
+    <div id="lineupList" class="lineup-list">
+      <!-- RN cards injected here -->
+    </div>
+  </section>
+
+
+  <!-- MAIN ACTION -->
+  <section id="mainActionCard" class="card hidden">
+    <button id="tookCallBtn" class="primary-call-btn">
+      📞 Took a Call
+    </button>
+
+    <div class="secondary-actions">
+      <button id="rotateBtn">Rotate</button>
+      <button id="copyLineupBtn">Copy lineup</button>
+      <button id="resetLineupBtn">Reset lineup</button>
+    </div>
+  </section>
+
+
+  <!-- ADD RN -->
+  <section id="addRNCard" class="card hidden">
+    <h3>Add RN</h3>
+
+    <div class="add-row">
+      <input
+        id="rnNameInput"
+        type="text"
+        placeholder="RN name"
+      />
+
+      <select id="rnTypeSelect">
+        <option value="standard">Standard</option>
+        <option value="evening">Evening</option>
+      </select>
+
+      <button id="addRNBtn">Add RN</button>
+    </div>
+  </section>
+
+
+  <!-- DAILY ASSIGNMENTS -->
+  <section id="dailyAssignmentsCard" class="card hidden">
+    <details>
+      <summary>Daily Assignments</summary>
+
+      <div class="assignment-section">
+        <h4>PTO / Flex / Out</h4>
+        <div id="ptoList" class="chip-list"></div>
+      </div>
+
+      <div class="assignment-section">
+        <h4>Precepting</h4>
+        <div id="preceptingList" class="chip-list"></div>
+      </div>
+
+      <div class="assignment-section">
+        <h4>CM Coverage</h4>
+        <div id="cmCoverageList" class="chip-list"></div>
+      </div>
+
+    </details>
+  </section>
+
+
+  <!-- HANDOFF MESSAGE -->
+  <section id="handoffCard" class="card hidden">
+    <h3>Handoff Message</h3>
+
+    <pre id="handoffPreview" class="handoff-preview"></pre>
+
+    <button id="copyHandoffBtn">
+      Copy handoff message
+    </button>
+  </section>
+
+
+  <!-- ACTIVITY LOG -->
+  <section id="logCard" class="card hidden">
+    <h3>Activity Log</h3>
+
+    <div id="activityLog" class="log-container"></div>
+
+    <button id="copyLogBtn">Copy log</button>
+  </section>
+
+
+  <!-- DIAGNOSTICS -->
+  <section id="diagnosticsCard" class="card diagnostics">
+    <details>
+      <summary>Diagnostics</summary>
+
+      <div class="diag-row">
+        <span>Page URL:</span>
+        <span id="diagURL"></span>
+      </div>
+
+      <div class="diag-row">
+        <span>Iframe:</span>
+        <span id="diagIframe"></span>
+      </div>
+
+      <div class="diag-row">
+        <span>Firebase SDK:</span>
+        <span id="diagFirebase"></span>
+      </div>
+
+      <div class="diag-row">
+        <span>Clipboard API:</span>
+        <span id="diagClipboard"></span>
+      </div>
+
+      <div class="diag-row">
+        <span>Sync Mode:</span>
+        <span id="diagSync"></span>
+      </div>
+
+    </details>
+  </section>
+
+</div>
+
+</body>
+
+<script>
+
+/* =========================================================
+   GLOBAL APPLICATION STATE
+========================================================= */
+
+const APP_VERSION = "2026.03.12.1";
+
+let mode = null;
+
+let lineup = [];
+
+let rotationStartedAt = null;
+
+let rotationLengthMinutes = 30;
+
+let timerPaused = false;
+
+let pauseStartedAt = null;
+
+let pausedElapsed = 0;
+
+let lunchAssignments = {};
+
+let activityLog = [];
+
+
+/* =========================================================
+   UTILITIES
+========================================================= */
+
+function now() {
+  return new Date().getTime();
+}
+
+function minutesBetween(start, end) {
+  return Math.floor((end - start) / 60000);
+}
+
+function formatTimeRemaining(ms) {
+
+  if (ms < 0) ms = 0;
+
+  const totalSeconds = Math.floor(ms / 1000);
+
+  const minutes = Math.floor(totalSeconds / 60);
+
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${seconds.toString().padStart(2,'0')}`;
+}
+
+function initials(name) {
+
+  if (!name) return "?";
+
+  const parts = name.trim().split(" ");
+
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+
+/* =========================================================
+   FRONT RN
+========================================================= */
+
+function getFrontRN() {
+
+  if (lineup.length === 0) return null;
+
+  return lineup[0];
+}
+
+function updateFrontSummary() {
+
+  const front = getFrontRN();
+
+  const nameEl = document.getElementById("frontRNName");
+
+  const timeEl = document.getElementById("frontRNTime");
+
+  if (!front) {
+
+    nameEl.textContent = "—";
+
+    timeEl.textContent = "--";
+
+    return;
+  }
+
+  nameEl.textContent = front.name;
+
+  const remaining = getRemainingTime();
+
+  timeEl.textContent = formatTimeRemaining(remaining);
+}
+
+
+/* =========================================================
+   TIMER
+========================================================= */
+
+function getRemainingTime() {
+
+  if (!rotationStartedAt) return rotationLengthMinutes * 60000;
+
+  if (timerPaused) return rotationLengthMinutes * 60000 - pausedElapsed;
+
+  const elapsed = now() - rotationStartedAt;
+
+  const remaining = rotationLengthMinutes * 60000 - elapsed;
+
+  return remaining;
+}
+
+function startRotationTimer() {
+
+  rotationStartedAt = now();
+
+  timerPaused = false;
+
+  pausedElapsed = 0;
+}
+
+function pauseTimer() {
+
+  if (timerPaused) return;
+
+  timerPaused = true;
+
+  pauseStartedAt = now();
+
+  pausedElapsed = pauseStartedAt - rotationStartedAt;
+
+  logEvent("Front RN unavailable. Timer paused.");
+}
+
+function resumeTimer() {
+
+  if (!timerPaused) return;
+
+  timerPaused = false;
+
+  rotationStartedAt = now() - pausedElapsed;
+
+  pausedElapsed = 0;
+
+  logEvent("Front RN back. Timer resumed.");
+}
+
+function resetTimer() {
+
+  startRotationTimer();
+
+  logEvent("Timer reset.");
+}
+
+
+/* =========================================================
+   MANUAL FRONT START
+========================================================= */
+
+function parseManualTime(input) {
+
+  if (!input) return null;
+
+  const match = input.trim().match(/^(\d{1,2}):?(\d{2})?\s*(a|p)?$/i);
+
+  if (!match) return null;
+
+  let hour = parseInt(match[1]);
+
+  let minute = match[2] ? parseInt(match[2]) : 0;
+
+  const meridian = match[3];
+
+  if (meridian) {
+
+    if (meridian.toLowerCase() === "p" && hour < 12) hour += 12;
+
+    if (meridian.toLowerCase() === "a" && hour === 12) hour = 0;
+  }
+
+  const d = new Date();
+
+  d.setHours(hour);
+
+  d.setMinutes(minute);
+
+  d.setSeconds(0);
+
+  return d.getTime();
+}
+
+function setManualStart() {
+
+  const input = document.getElementById("manualStartInput").value;
+
+  const parsed = parseManualTime(input);
+
+  if (!parsed) {
+
+    alert("Invalid time. Example: 8:47a");
+
+    return;
+  }
+
+  rotationStartedAt = parsed;
+
+  timerPaused = false;
+
+  logEvent("Front RN timer set manually.");
+
+  updateFrontSummary();
+}
+
+function startNow() {
+
+  rotationStartedAt = now();
+
+  timerPaused = false;
+
+  logEvent("Front RN timer set to now.");
+
+  updateFrontSummary();
+}
+
+
+/* =========================================================
+   LINEUP MANAGEMENT
+========================================================= */
+
+function addRN(name, type="standard") {
+
+  const rn = {
+
+    id: Date.now(),
+
+    name,
+
+    type,
+
+    calls: 0,
+
+    lunch: false
+  };
+
+  lineup.push(rn);
+
+  renderLineup();
+
+  logEvent(`${name} added to lineup.`);
+}
+
+function removeRN(id) {
+
+  lineup = lineup.filter(r => r.id !== id);
+
+  renderLineup();
+
+  logEvent("RN removed.");
+}
+
+function rotateLineup() {
+
+  if (lineup.length < 2) return;
+
+  const first = lineup.shift();
+
+  lineup.push(first);
+
+  startRotationTimer();
+
+  renderLineup();
+
+  logEvent("Lineup rotated.");
+}
+
+function tookCall() {
+
+  const front = getFrontRN();
+
+  if (!front) return;
+
+  front.calls++;
+
+  rotateLineup();
+
+  logEvent(`${front.name} took a call.`);
+}
+
+
+/* =========================================================
+   LUNCH
+========================================================= */
+
+function sendToLunch(id) {
+
+  const rn = lineup.find(r => r.id === id);
+
+  if (!rn) return;
+
+  rn.lunch = true;
+
+  logEvent(`${rn.name} went to lunch.`);
+
+  renderLineup();
+}
+
+function returnFromLunch(id) {
+
+  const rn = lineup.find(r => r.id === id);
+
+  if (!rn) return;
+
+  rn.lunch = false;
+
+  logEvent(`${rn.name} returned from lunch.`);
+
+  renderLineup();
+}
+
+
+/* =========================================================
+   LINEUP RENDERING
+========================================================= */
+
+function renderLineup() {
+
+  const container = document.getElementById("lineupList");
+
+  container.innerHTML = "";
+
+  lineup.forEach((rn, index) => {
+
+    const card = document.createElement("div");
+
+    card.className = "rn-card";
+
+    if (index === 0) card.classList.add("front");
+
+    card.innerHTML = `
+      <div class="rn-avatar">${initials(rn.name)}</div>
+
+      <div class="rn-info">
+        <div class="rn-name">${rn.name}</div>
+        <div class="rn-meta">
+          Calls: ${rn.calls}
+        </div>
+      </div>
+
+      <div class="rn-actions">
+
+        <button onclick="sendToLunch(${rn.id})">🥗 Lunch</button>
+
+        <button onclick="removeRN(${rn.id})">✕</button>
+
+      </div>
+    `;
+
+    container.appendChild(card);
+
+  });
+
+  updateFrontSummary();
+}
+
+
+/* =========================================================
+   LOGGING
+========================================================= */
+
+function logEvent(text) {
+
+  const timestamp = new Date().toLocaleTimeString();
+
+  const entry = `[${timestamp}] ${text}`;
+
+  activityLog.unshift(entry);
+
+  renderLog();
+}
+
+function renderLog() {
+
+  const container = document.getElementById("activityLog");
+
+  container.innerHTML = "";
+
+  activityLog.slice(0,50).forEach(item => {
+
+    const div = document.createElement("div");
+
+    div.textContent = item;
+
+    container.appendChild(div);
+  });
+}
+
+</script>
+
+<script>
+
+/* =========================================================
+   SYNC / STORAGE STATE
+========================================================= */
+
+let syncMode = "local";
+let firebaseReady = false;
+let firebaseDb = null;
+let firebaseRoomRef = null;
+let firebasePresenceRef = null;
+let syncHeartbeat = null;
+let localStorageKey = "ccmu1_lineup_app_state_v20260312";
+let firebaseRoomCode = "CCMU1";
+
+/* =========================================================
+   SERIALIZATION
+========================================================= */
+
+function getAppState() {
+  return {
+    version: APP_VERSION,
+    mode,
+    lineup,
+    rotationStartedAt,
+    rotationLengthMinutes,
+    timerPaused,
+    pauseStartedAt,
+    pausedElapsed,
+    lunchAssignments,
+    activityLog,
+    updatedAt: now()
+  };
+}
+
+function applyAppState(state, options = {}) {
+  if (!state || typeof state !== "object") return;
+
+  mode = state.mode ?? mode;
+  lineup = Array.isArray(state.lineup) ? state.lineup : [];
+  rotationStartedAt = state.rotationStartedAt ?? rotationStartedAt;
+  rotationLengthMinutes = state.rotationLengthMinutes ?? rotationLengthMinutes;
+  timerPaused = !!state.timerPaused;
+  pauseStartedAt = state.pauseStartedAt ?? null;
+  pausedElapsed = state.pausedElapsed ?? 0;
+  lunchAssignments = state.lunchAssignments && typeof state.lunchAssignments === "object"
+    ? state.lunchAssignments
+    : {};
+  activityLog = Array.isArray(state.activityLog) ? state.activityLog : [];
+
+  renderModeUI();
+  renderLineup();
+  renderLog();
+  updateFrontSummary();
+
+  if (!options.silent) {
+    updateSyncStatus();
+  }
+}
+
+function saveLocalState() {
+  try {
+    localStorage.setItem(localStorageKey, JSON.stringify(getAppState()));
+  } catch (err) {
+    console.warn("Local save failed:", err);
+  }
+}
+
+function loadLocalState() {
+  try {
+    const raw = localStorage.getItem(localStorageKey);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.warn("Local load failed:", err);
+    return null;
+  }
+}
+
+/* =========================================================
+   FIREBASE INIT
+========================================================= */
+
+async function initFirebaseSync() {
+  try {
+    if (!window.firebase || !window.firebase.apps) {
+      firebaseReady = false;
+      syncMode = "local";
+      updateDiagnostics();
+      updateSyncStatus();
+      return;
+    }
+
+    const config = {
+      apiKey: "AIzaSyC-H6-1UExZRl92N37zcZDHRMQr8zeZDVI",
+      authDomain: "ccmu1-lineup.firebaseapp.com",
+      databaseURL: "https://ccmu1-lineup-default-rtdb.firebaseio.com",
+      projectId: "ccmu1-lineup"
+    };
+
+    let app;
+    if (firebase.apps.length) {
+      app = firebase.apps[0];
+    } else {
+      app = firebase.initializeApp(config);
+    }
+
+    firebaseDb = firebase.database();
+    firebaseRoomRef = firebaseDb.ref("rooms/" + firebaseRoomCode + "/state");
+    firebasePresenceRef = firebaseDb.ref(
+      "rooms/" + firebaseRoomCode + "/presence/" + generatePresenceId()
+    );
+
+    firebaseReady = true;
+    syncMode = "live";
+
+    firebasePresenceRef.set({
+      online: true,
+      ts: now()
+    });
+
+    firebasePresenceRef.onDisconnect().remove();
+
+    firebaseRoomRef.on("value", snapshot => {
+      const remote = snapshot.val();
+      if (!remote) return;
+
+      const current = getAppState();
+
+      if ((remote.updatedAt || 0) > (current.updatedAt || 0)) {
+        applyAppState(remote, { silent: false });
+        saveLocalState();
+      }
+    });
+
+    pushStateToFirebase(true);
+
+    updateDiagnostics();
+    updateSyncStatus();
+
+  } catch (err) {
+    console.warn("Firebase init failed. Falling back to local.", err);
+    firebaseReady = false;
+    syncMode = "local";
+    updateDiagnostics();
+    updateSyncStatus();
+  }
+}
+
+function pushStateToFirebase(force = false) {
+  if (!firebaseReady || !firebaseRoomRef) return;
+
+  try {
+    const state = getAppState();
+    firebaseRoomRef.set(state);
+  } catch (err) {
+    console.warn("Firebase push failed:", err);
+    syncMode = "local";
+    updateDiagnostics();
+    updateSyncStatus();
+    if (!force) saveLocalState();
+  }
+}
+
+function persistState() {
+  saveLocalState();
+
+  if (syncMode === "live") {
+    pushStateToFirebase();
+  }
+
+  updateDiagnostics();
+  updateSyncStatus();
+}
+
+/* =========================================================
+   DIAGNOSTICS
+========================================================= */
+
+function isInIframe() {
+  try {
+    return window.self !== window.top;
+  } catch (err) {
+    return true;
+  }
+}
+
+function clipboardAvailable() {
+  return !!(navigator.clipboard && navigator.clipboard.writeText);
+}
+
+function updateDiagnostics() {
+  const urlEl = document.getElementById("diagURL");
+  const iframeEl = document.getElementById("diagIframe");
+  const firebaseEl = document.getElementById("diagFirebase");
+  const clipboardEl = document.getElementById("diagClipboard");
+  const syncEl = document.getElementById("diagSync");
+
+  if (urlEl) urlEl.textContent = window.location.href;
+  if (iframeEl) iframeEl.textContent = isInIframe() ? "Yes" : "No";
+  if (firebaseEl) firebaseEl.textContent = firebaseReady ? "Loaded" : "Unavailable / fallback";
+  if (clipboardEl) clipboardEl.textContent = clipboardAvailable() ? "Available" : "Fallback only";
+  if (syncEl) syncEl.textContent = syncMode === "live" ? "Live sync" : "Local only";
+}
+
+function updateSyncStatus() {
+  const el = document.getElementById("syncStatus");
+  const modeBadge = document.getElementById("modeIndicator");
+
+  if (!el) return;
+
+  if (syncMode === "live") {
+    el.textContent = "Sync: Live";
+  } else if (syncMode === "local") {
+    el.textContent = "Sync: Local only";
+  } else {
+    el.textContent = "Sync: Checking...";
+  }
+
+  if (modeBadge) {
+    if (mode === "pods") {
+      modeBadge.textContent = "PODs Day";
+      modeBadge.classList.remove("hidden");
+    } else if (mode === "available") {
+      modeBadge.textContent = "Available Coverage";
+      modeBadge.classList.remove("hidden");
+    } else {
+      modeBadge.textContent = "";
+      modeBadge.classList.add("hidden");
+    }
+  }
+}
+
+function updateClock() {
+  const el = document.getElementById("currentTime");
+  if (!el) return;
+
+  el.textContent = new Date().toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+/* =========================================================
+   MODE UI HELPERS
+========================================================= */
+
+function renderModeUI() {
+  const modeSelector = document.getElementById("modeSelector");
+  const frontSummary = document.getElementById("frontSummary");
+  const timerCard = document.getElementById("timerCard");
+  const lunchPlanCard = document.getElementById("lunchPlanCard");
+  const lineupCard = document.getElementById("lineupCard");
+  const mainActionCard = document.getElementById("mainActionCard");
+  const addRNCard = document.getElementById("addRNCard");
+  const dailyAssignmentsCard = document.getElementById("dailyAssignmentsCard");
+  const handoffCard = document.getElementById("handoffCard");
+  const logCard = document.getElementById("logCard");
+  const subtitle = document.getElementById("pageSubtitle");
+
+  const hasMode = !!mode;
+
+  if (modeSelector) modeSelector.classList.toggle("hidden", hasMode);
+  if (frontSummary) frontSummary.classList.toggle("hidden", !hasMode);
+  if (timerCard) timerCard.classList.toggle("hidden", mode !== "pods");
+  if (lunchPlanCard) lunchPlanCard.classList.toggle("hidden", mode !== "pods");
+  if (lineupCard) lineupCard.classList.toggle("hidden", !hasMode);
+  if (mainActionCard) mainActionCard.classList.toggle("hidden", !hasMode);
+  if (addRNCard) addRNCard.classList.toggle("hidden", !hasMode);
+  if (dailyAssignmentsCard) dailyAssignmentsCard.classList.toggle("hidden", !hasMode);
+  if (handoffCard) handoffCard.classList.toggle("hidden", mode !== "available");
+  if (logCard) logCard.classList.toggle("hidden", !hasMode);
+
+  if (subtitle) {
+    if (mode === "pods") {
+      subtitle.textContent = "PODs Lineup";
+    } else if (mode === "available") {
+      subtitle.textContent = "Available Coverage";
+    } else {
+      subtitle.textContent = "Lineup Manager";
+    }
+  }
+
+  updateSyncStatus();
+}
+
+/* =========================================================
+   COPY HELPERS
+========================================================= */
+
+function copyText(text, successMessage = "Copied.") {
+  if (!text) return;
+
+  if (clipboardAvailable()) {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        console.log(successMessage);
+      })
+      .catch(err => {
+        console.warn("Clipboard write failed, using fallback.", err);
+        fallbackCopy(text);
+      });
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  ta.style.top = "-9999px";
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  document.body.removeChild(ta);
+}
+
+function buildStructuredLineupText() {
+  if (!lineup.length) return "No lineup set.";
+
+  const front = getFrontRN();
+  const remaining = formatTimeRemaining(getRemainingTime());
+
+  const lines = [];
+
+  if (front) {
+    lines.push(`Front: ${front.name} (${remaining} left)`);
+  }
+
+  if (lineup.length > 1) {
+    lines.push(`Next: ${lineup[1].name}`);
+  }
+
+  if (lineup.length > 2) {
+    lines.push("Then: " + lineup.slice(2).map(r => r.name).join(", "));
+  }
+
+  const lunchNames = lineup.filter(r => r.lunch).map(r => r.name);
+  if (lunchNames.length) {
+    lines.push("Lunch: " + lunchNames.join(", "));
+  }
+
+  return lines.join("\n");
+}
+
+function buildLogText() {
+  if (!activityLog.length) return "No activity logged.";
+  return activityLog.join("\n");
+}
+
+function buildHandoffText() {
+  const lines = [];
+
+  lines.push("CCMU1 Coverage Handoff");
+  lines.push("");
+
+  if (mode === "pods") {
+    lines.push(buildStructuredLineupText());
+  } else {
+    lines.push("Mode: Available Coverage");
+    if (lineup.length) {
+      lines.push("Coverage Staff: " + lineup.map(r => r.name).join(", "));
+    }
+  }
+
+  if (activityLog.length) {
+    lines.push("");
+    lines.push("Recent Activity:");
+    activityLog.slice(0, 10).forEach(item => lines.push(item));
+  }
+
+  return lines.join("\n");
+}
+
+function renderHandoffPreview() {
+  const el = document.getElementById("handoffPreview");
+  if (!el) return;
+  el.textContent = buildHandoffText();
+}
+
+/* =========================================================
+   TIMER LOOP
+========================================================= */
+
+function tick() {
+  updateClock();
+
+  const timerDisplay = document.getElementById("timerDisplay");
+
+  if (timerDisplay && mode === "pods" && rotationStartedAt) {
+    const remaining = getRemainingTime();
+    timerDisplay.textContent = formatTimeRemaining(remaining);
+
+    if (!timerPaused && remaining <= 0) {
+      rotateLineup();
+      logEvent("Auto-rotate triggered.");
+      persistState();
+    }
+  }
+
+  updateFrontSummary();
+  renderHandoffPreview();
+}
+
+setInterval(tick, 1000);
+setInterval(updateClock, 15000);
+
+/* =========================================================
+   EVENT WIRING
+========================================================= */
+
+function wireEvents() {
+  const podsModeBtn = document.getElementById("podsModeBtn");
+  const availableModeBtn = document.getElementById("availableModeBtn");
+  const pauseTimerBtn = document.getElementById("pauseTimerBtn");
+  const resumeTimerBtn = document.getElementById("resumeTimerBtn");
+  const resetTimerBtn = document.getElementById("resetTimerBtn");
+  const setManualStartBtn = document.getElementById("setManualStartBtn");
+  const startNowBtn = document.getElementById("startNowBtn");
+  const tookCallBtn = document.getElementById("tookCallBtn");
+  const rotateBtn = document.getElementById("rotateBtn");
+  const copyLineupBtn = document.getElementById("copyLineupBtn");
+  const resetLineupBtn = document.getElementById("resetLineupBtn");
+  const addRNBtn = document.getElementById("addRNBtn");
+  const copyHandoffBtn = document.getElementById("copyHandoffBtn");
+  const copyLogBtn = document.getElementById("copyLogBtn");
+
+  if (podsModeBtn) {
+    podsModeBtn.addEventListener("click", () => {
+      mode = "pods";
+      if (!rotationStartedAt) startRotationTimer();
+      renderModeUI();
+      persistState();
+    });
+  }
+
+  if (availableModeBtn) {
+    availableModeBtn.addEventListener("click", () => {
+      mode = "available";
+      renderModeUI();
+      persistState();
+    });
+  }
+
+  if (pauseTimerBtn) {
+    pauseTimerBtn.addEventListener("click", () => {
+      pauseTimer();
+      pauseTimerBtn.classList.add("hidden");
+      if (resumeTimerBtn) resumeTimerBtn.classList.remove("hidden");
+      persistState();
+    });
+  }
+
+  if (resumeTimerBtn) {
+    resumeTimerBtn.addEventListener("click", () => {
+      resumeTimer();
+      resumeTimerBtn.classList.add("hidden");
+      if (pauseTimerBtn) pauseTimerBtn.classList.remove("hidden");
+      persistState();
+    });
+  }
+
+  if (resetTimerBtn) {
+    resetTimerBtn.addEventListener("click", () => {
+      resetTimer();
+      persistState();
+    });
+  }
+
+  if (setManualStartBtn) {
+    setManualStartBtn.addEventListener("click", () => {
+      setManualStart();
+      persistState();
+    });
+  }
+
+  if (startNowBtn) {
+    startNowBtn.addEventListener("click", () => {
+      startNow();
+      persistState();
+    });
+  }
+
+  if (tookCallBtn) {
+    tookCallBtn.addEventListener("click", () => {
+      tookCall();
+      persistState();
+    });
+  }
+
+  if (rotateBtn) {
+    rotateBtn.addEventListener("click", () => {
+      rotateLineup();
+      logEvent("Manual rotate.");
+      persistState();
+    });
+  }
+
+  if (copyLineupBtn) {
+    copyLineupBtn.addEventListener("click", () => {
+      copyText(buildStructuredLineupText(), "Lineup copied.");
+    });
+  }
+
+  if (resetLineupBtn) {
+    resetLineupBtn.addEventListener("click", () => {
+      if (!confirm("Reset lineup and timer?")) return;
+
+      lineup = [];
+      rotationStartedAt = null;
+      timerPaused = false;
+      pauseStartedAt = null;
+      pausedElapsed = 0;
+      activityLog = [];
+
+      renderLineup();
+      renderLog();
+      renderHandoffPreview();
+      renderModeUI();
+      persistState();
+    });
+  }
+
+  if (addRNBtn) {
+    addRNBtn.addEventListener("click", () => {
+      const nameInput = document.getElementById("rnNameInput");
+      const typeSelect = document.getElementById("rnTypeSelect");
+
+      const name = nameInput ? nameInput.value.trim() : "";
+      const type = typeSelect ? typeSelect.value : "standard";
+
+      if (!name) return;
+
+      addRN(name, type);
+
+      if (nameInput) nameInput.value = "";
+
+      if (!rotationStartedAt && mode === "pods") {
+        startRotationTimer();
+      }
+
+      persistState();
+    });
+  }
+
+  if (copyHandoffBtn) {
+    copyHandoffBtn.addEventListener("click", () => {
+      copyText(buildHandoffText(), "Handoff copied.");
+    });
+  }
+
+  if (copyLogBtn) {
+    copyLogBtn.addEventListener("click", () => {
+      copyText(buildLogText(), "Log copied.");
+    });
+  }
+}
+
+/* =========================================================
+   INITIAL BOOTSTRAP
+========================================================= */
+
+function bootstrapApp() {
+  updateClock();
+  updateDiagnostics();
+  updateSyncStatus();
+
+  const saved = loadLocalState();
+  if (saved) {
+    applyAppState(saved, { silent: true });
+  } else {
+    renderModeUI();
+    renderLineup();
+    renderLog();
+    renderHandoffPreview();
+  }
+
+  wireEvents();
+  initFirebaseSync();
+  tick();
+}
+
+document.addEventListener("DOMContentLoaded", bootstrapApp);
+
+</script>
+
+<script>
+
+/* =========================================================
+   RN CARD ENHANCEMENTS
+========================================================= */
+
+function buildRNCard(rn, index) {
+  const isFront = index === 0;
+  const isLunch = !!rn.lunch;
+  const card = document.createElement("div");
+
+  card.className = "rn-card";
+  if (isFront) card.classList.add("front");
+  if (isLunch) card.classList.add("at-lunch");
+
+  const statusBits = [];
+
+  if (isFront) {
+    statusBits.push("Up front now");
+  }
+
+  if (rn.type === "evening") {
+    statusBits.push("Evening");
+  }
+
+  if (isLunch) {
+    statusBits.push("At lunch");
+  }
+
+  statusBits.push(`Calls: ${rn.calls || 0}`);
+
+  const actionWrap = document.createElement("div");
+  actionWrap.className = "rn-actions";
+
+  if (!isLunch) {
+    const lunchBtn = document.createElement("button");
+    lunchBtn.type = "button";
+    lunchBtn.textContent = "🥗 Lunch";
+    lunchBtn.title = "Send to lunch";
+    lunchBtn.addEventListener("click", function () {
+      sendToLunch(rn.id);
+      persistState();
+    });
+    actionWrap.appendChild(lunchBtn);
+  } else {
+    const backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.textContent = "↩ Back";
+    backBtn.title = "Return from lunch";
+    backBtn.addEventListener("click", function () {
+      returnFromLunch(rn.id);
+      persistState();
+    });
+    actionWrap.appendChild(backBtn);
+  }
+
+  if (!isFront) {
+    const frontBtn = document.createElement("button");
+    frontBtn.type = "button";
+    frontBtn.textContent = "↑ Front";
+    frontBtn.title = "Move to front";
+    frontBtn.addEventListener("click", function () {
+      moveRNToFront(rn.id);
+      persistState();
+    });
+    actionWrap.appendChild(frontBtn);
+  }
+
+  if (!isFront) {
+    const callBtn = document.createElement("button");
+    callBtn.type = "button";
+    callBtn.textContent = "📞 Call";
+    callBtn.title = "Mark this RN as took a call";
+    callBtn.addEventListener("click", function () {
+      tookCallOutOfTurn(rn.id);
+      persistState();
+    });
+    actionWrap.appendChild(callBtn);
+  }
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.textContent = "✕ Remove";
+  removeBtn.title = "Remove from lineup";
+  removeBtn.addEventListener("click", function () {
+    const confirmed = window.confirm(`Remove ${rn.name} from lineup?`);
+    if (!confirmed) return;
+    removeRN(rn.id);
+    persistState();
+  });
+  actionWrap.appendChild(removeBtn);
+
+  card.innerHTML = `
+    <div class="rn-avatar">${initials(rn.name)}</div>
+    <div class="rn-info">
+      <div class="rn-name">${escapeHTML(rn.name)}</div>
+      <div class="rn-meta">${escapeHTML(statusBits.join(" · "))}</div>
+    </div>
+  `;
+
+  card.appendChild(actionWrap);
+
+  return card;
+}
+
+function moveRNToFront(id) {
+  const idx = lineup.findIndex(r => r.id === id);
+  if (idx < 0) return;
+  const [rn] = lineup.splice(idx, 1);
+  lineup.unshift(rn);
+  startRotationTimer();
+  logEvent(`${rn.name} moved to front.`);
+  renderLineup();
+}
+
+function tookCallOutOfTurn(id) {
+  const idx = lineup.findIndex(r => r.id === id);
+  if (idx < 0) return;
+  lineup[idx].calls = (lineup[idx].calls || 0) + 1;
+  const [rn] = lineup.splice(idx, 1);
+  lineup.push(rn);
+  logEvent(`${rn.name} took a call out of turn and moved to back.`);
+  renderLineup();
+}
+
+/* =========================================================
+   LUNCH SLOT RENDERING
+========================================================= */
+
+const lunchSlotMap = {
+  "~12:00": "lunchSlot1200",
+  "~12:15": "lunchSlot1215",
+  "~12:30": "lunchSlot1230",
+  "~12:45": "lunchSlot1245",
+  "~3:30": "lunchSlot330"
+};
+
+function assignLunchSlot(rnId, slotLabel) {
+  if (!slotLabel) return;
+  lunchAssignments[rnId] = slotLabel;
+  logEvent("Lunch slot updated.");
+  renderLunchSlots();
+}
+
+function clearLunchSlot(rnId) {
+  delete lunchAssignments[rnId];
+  renderLunchSlots();
+}
+
+function renderLunchSlots() {
+  Object.values(lunchSlotMap).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = "";
+  });
+
+  const grouped = {};
+
+  Object.keys(lunchAssignments).forEach(rnId => {
+    const slot = lunchAssignments[rnId];
+    if (!grouped[slot]) grouped[slot] = [];
+    const rn = lineup.find(r => String(r.id) === String(rnId));
+    if (rn) grouped[slot].push(rn.name);
+  });
+
+  Object.keys(grouped).forEach(slot => {
+    const targetId = lunchSlotMap[slot];
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    el.textContent = grouped[slot].join(", ");
+  });
+}
+
+function renderLunchSelectorsInCards() {
+  const container = document.getElementById("lineupList");
+  if (!container) return;
+
+  const cards = container.querySelectorAll(".rn-card");
+  cards.forEach((card, index) => {
+    const rn = lineup[index];
+    if (!rn) return;
+
+    const select = document.createElement("select");
+    select.className = "rn-lunch-select";
+    select.title = "Set lunch slot";
+
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = "Lunch slot";
+    select.appendChild(defaultOpt);
+
+    Object.keys(lunchSlotMap).forEach(slot => {
+      const opt = document.createElement("option");
+      opt.value = slot;
+      opt.textContent = slot;
+      if (lunchAssignments[rn.id] === slot) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    select.addEventListener("change", function () {
+      if (!select.value) {
+        clearLunchSlot(rn.id);
+      } else {
+        assignLunchSlot(rn.id, select.value);
+      }
+      persistState();
+    });
+
+    card.appendChild(select);
+  });
+}
+
+/* =========================================================
+   DAILY ASSIGNMENT HELPERS
+========================================================= */
+
+let dailyAssignments = {
+  pto: [],
+  precepting: [],
+  cmCoverage: []
+};
+
+function normalizeAssignmentsFromState() {
+  if (!dailyAssignments || typeof dailyAssignments !== "object") {
+    dailyAssignments = { pto: [], precepting: [], cmCoverage: [] };
+  }
+  if (!Array.isArray(dailyAssignments.pto)) dailyAssignments.pto = [];
+  if (!Array.isArray(dailyAssignments.precepting)) dailyAssignments.precepting = [];
+  if (!Array.isArray(dailyAssignments.cmCoverage)) dailyAssignments.cmCoverage = [];
+}
+
+function renderChipList(containerId, values, emptyText) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  el.innerHTML = "";
+
+  if (!values || !values.length) {
+    const span = document.createElement("span");
+    span.className = "muted-empty";
+    span.textContent = emptyText;
+    el.appendChild(span);
+    return;
+  }
+
+  values.forEach((value, idx) => {
+    const chip = document.createElement("span");
+    chip.className = "assignment-chip";
+
+    const label = document.createElement("span");
+    label.textContent = value;
+    chip.appendChild(label);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.textContent = "✕";
+    removeBtn.title = "Remove";
+    removeBtn.addEventListener("click", function () {
+      removeAssignmentChip(containerId, idx);
+    });
+
+    chip.appendChild(removeBtn);
+    el.appendChild(chip);
+  });
+}
+
+function removeAssignmentChip(containerId, idx) {
+  if (containerId === "ptoList") {
+    dailyAssignments.pto.splice(idx, 1);
+  } else if (containerId === "preceptingList") {
+    dailyAssignments.precepting.splice(idx, 1);
+  } else if (containerId === "cmCoverageList") {
+    dailyAssignments.cmCoverage.splice(idx, 1);
+  }
+
+  renderDailyAssignments();
+  persistState();
+}
+
+function renderDailyAssignments() {
+  normalizeAssignmentsFromState();
+
+  renderChipList("ptoList", dailyAssignments.pto, "None");
+  renderChipList("preceptingList", dailyAssignments.precepting, "None");
+  renderChipList("cmCoverageList", dailyAssignments.cmCoverage, "None");
+}
+
+/* =========================================================
+   MODE-SPECIFIC UX HELPERS
+========================================================= */
+
+function updatePauseResumeButtons() {
+  const pauseBtn = document.getElementById("pauseTimerBtn");
+  const resumeBtn = document.getElementById("resumeTimerBtn");
+
+  if (!pauseBtn || !resumeBtn) return;
+
+  if (timerPaused) {
+    pauseBtn.classList.add("hidden");
+    resumeBtn.classList.remove("hidden");
+  } else {
+    pauseBtn.classList.remove("hidden");
+    resumeBtn.classList.add("hidden");
+  }
+}
+
+function updateMainActionButton() {
+  const btn = document.getElementById("tookCallBtn");
+  if (!btn) return;
+
+  const front = getFrontRN();
+
+  if (!front) {
+    btn.disabled = true;
+    btn.textContent = "📞 Took a Call";
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = `📞 Took a Call · ${front.name}`;
+}
+
+function updateManualStartLabelContext() {
+  const input = document.getElementById("manualStartInput");
+  const front = getFrontRN();
+
+  if (!input) return;
+
+  if (!front) {
+    input.placeholder = "e.g. 8:47a";
+    return;
+  }
+
+  input.placeholder = `When ${front.name} started`;
+}
+
+function updatePodsUX() {
+  updatePauseResumeButtons();
+  updateMainActionButton();
+  updateManualStartLabelContext();
+}
+
+/* =========================================================
+   OVERRIDES / ENHANCED RENDER PIPELINE
+========================================================= */
+
+const originalGetAppState = getAppState;
+getAppState = function () {
+  const state = originalGetAppState();
+  state.dailyAssignments = dailyAssignments;
+  return state;
+};
+
+const originalApplyAppState = applyAppState;
+applyAppState = function (state, options = {}) {
+  originalApplyAppState(state, options);
+
+  if (state && state.dailyAssignments) {
+    dailyAssignments = state.dailyAssignments;
+  }
+
+  normalizeAssignmentsFromState();
+  renderDailyAssignments();
+  renderLunchSlots();
+  updatePodsUX();
+  renderHandoffPreview();
+};
+
+const originalRenderLineup = renderLineup;
+renderLineup = function () {
+  const container = document.getElementById("lineupList");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  lineup.forEach((rn, index) => {
+    container.appendChild(buildRNCard(rn, index));
+  });
+
+  renderLunchSelectorsInCards();
+  renderLunchSlots();
+  updateFrontSummary();
+  updatePodsUX();
+  renderHandoffPreview();
+};
+
+const originalRenderModeUI = renderModeUI;
+renderModeUI = function () {
+  originalRenderModeUI();
+  updatePodsUX();
+  renderDailyAssignments();
+  renderLunchSlots();
+  renderHandoffPreview();
+};
+
+/* =========================================================
+   HANDOFF UPGRADE
+========================================================= */
+
+const originalBuildHandoffText = buildHandoffText;
+buildHandoffText = function () {
+  const lines = [];
+
+  lines.push("CCMU1 Coverage Handoff");
+  lines.push("");
+
+  if (mode === "pods") {
+    lines.push(buildStructuredLineupText());
+  } else if (mode === "available") {
+    lines.push("Mode: Available Coverage");
+    if (lineup.length) {
+      lines.push("Coverage Staff: " + lineup.map(r => r.name).join(", "));
+    }
+  }
+
+  normalizeAssignmentsFromState();
+
+  if (dailyAssignments.pto.length) {
+    lines.push("");
+    lines.push("PTO / Flex / Out:");
+    dailyAssignments.pto.forEach(item => lines.push("• " + item));
+  }
+
+  if (dailyAssignments.precepting.length) {
+    lines.push("");
+    lines.push("Precepting:");
+    dailyAssignments.precepting.forEach(item => lines.push("• " + item));
+  }
+
+  if (dailyAssignments.cmCoverage.length) {
+    lines.push("");
+    lines.push("CM Coverage:");
+    dailyAssignments.cmCoverage.forEach(item => lines.push("• " + item));
+  }
+
+  const slottedLunch = lineup
+    .filter(r => lunchAssignments[r.id])
+    .map(r => `${r.name}: ${lunchAssignments[r.id]}`);
+
+  if (slottedLunch.length) {
+    lines.push("");
+    lines.push("Lunch Plan:");
+    slottedLunch.forEach(item => lines.push("• " + item));
+  }
+
+  if (activityLog.length) {
+    lines.push("");
+    lines.push("Recent Activity:");
+    activityLog.slice(0, 10).forEach(item => lines.push(item));
+  }
+
+  return lines.join("\n");
+};
+
+/* =========================================================
+   QUICK ENTRY HELPERS FOR ADOPTION
+========================================================= */
+
+function addAssignmentPrompt(type) {
+  let label = "";
+
+  if (type === "pto") label = "Enter PTO / Flex / Out item";
+  if (type === "precepting") label = "Enter precepting pair";
+  if (type === "cmCoverage") label = "Enter CM coverage item";
+
+  const value = window.prompt(label);
+  if (!value || !value.trim()) return;
+
+  normalizeAssignmentsFromState();
+
+  if (type === "pto") dailyAssignments.pto.push(value.trim());
+  if (type === "precepting") dailyAssignments.precepting.push(value.trim());
+  if (type === "cmCoverage") dailyAssignments.cmCoverage.push(value.trim());
+
+  renderDailyAssignments();
+  persistState();
+}
+
+function injectAssignmentQuickAddButtons() {
+  const cards = [
+    { listId: "ptoList", type: "pto", label: "+ Add" },
+    { listId: "preceptingList", type: "precepting", label: "+ Add" },
+    { listId: "cmCoverageList", type: "cmCoverage", label: "+ Add" }
+  ];
+
+  cards.forEach(cfg => {
+    const list = document.getElementById(cfg.listId);
+    if (!list) return;
+
+    const existing = list.parentElement.querySelector(".quick-add-btn");
+    if (existing) return;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "quick-add-btn";
+    btn.textContent = cfg.label;
+    btn.addEventListener("click", function () {
+      addAssignmentPrompt(cfg.type);
+    });
+
+    list.parentElement.appendChild(btn);
+  });
+}
+
+/* =========================================================
+   FINAL POLISH BOOTSTRAP
+========================================================= */
+
+function polishUX() {
+  normalizeAssignmentsFromState();
+  renderDailyAssignments();
+  renderLunchSlots();
+  updatePodsUX();
+  renderHandoffPreview();
+  injectAssignmentQuickAddButtons();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  setTimeout(polishUX, 50);
+});
+
+</script>
+
+<script>
+
+/* =========================================================
+   HTML ESCAPING
+========================================================= */
+
+function escapeHTML(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/* =========================================================
+   SHAREPOINT / TEAMS EMBED-SAFE POLISH
+========================================================= */
+
+function applyEmbedSafePolish() {
+  try {
+    document.documentElement.classList.add("embed-safe");
+    document.body.classList.add("embed-safe");
+  } catch (err) {
+    console.warn("Unable to apply embed-safe classes:", err);
+  }
+}
+
+function preventBrokenDragDefaults() {
+  document.addEventListener("dragover", function (event) {
+    event.preventDefault();
+  });
+
+  document.addEventListener("drop", function (event) {
+    event.preventDefault();
+  });
+}
+
+function applyTeamsSharePointFriendlySizing() {
+  const container = document.querySelector(".app-container");
+  if (!container) return;
+
+  const width = window.innerWidth || document.documentElement.clientWidth || 0;
+
+  if (width <= 820) {
+    container.classList.add("compact-width");
+  } else {
+    container.classList.remove("compact-width");
+  }
+}
+
+window.addEventListener("resize", applyTeamsSharePointFriendlySizing);
+
+/* =========================================================
+   SAFER BUTTON STATE HANDLING
+========================================================= */
+
+function refreshButtonStates() {
+  const tookCallBtn = document.getElementById("tookCallBtn");
+  const rotateBtn = document.getElementById("rotateBtn");
+  const copyLineupBtn = document.getElementById("copyLineupBtn");
+  const copyLogBtn = document.getElementById("copyLogBtn");
+  const copyHandoffBtn = document.getElementById("copyHandoffBtn");
+
+  const hasLineup = lineup.length > 0;
+  const hasMode = !!mode;
+  const hasLog = activityLog.length > 0;
+
+  if (tookCallBtn) tookCallBtn.disabled = !hasLineup;
+  if (rotateBtn) rotateBtn.disabled = lineup.length < 2;
+  if (copyLineupBtn) copyLineupBtn.disabled = !hasLineup;
+  if (copyLogBtn) copyLogBtn.disabled = !hasLog;
+  if (copyHandoffBtn) copyHandoffBtn.disabled = !hasMode;
+}
+
+/* =========================================================
+   ENHANCED STATUS TEXT
+========================================================= */
+
+function updateHumanFriendlyStatusText() {
+  const syncStatus = document.getElementById("syncStatus");
+  if (!syncStatus) return;
+
+  if (syncMode === "live") {
+    syncStatus.textContent = "Sync: Live sync";
+  } else if (syncMode === "local") {
+    syncStatus.textContent = "Sync: Local mode";
+  } else {
+    syncStatus.textContent = "Sync: Checking...";
+  }
+}
+
+/* =========================================================
+   ENHANCED PERSIST WRAPPER
+========================================================= */
+
+const originalPersistState = persistState;
+persistState = function () {
+  originalPersistState();
+  renderHandoffPreview();
+  refreshButtonStates();
+  updateHumanFriendlyStatusText();
+};
+
+/* =========================================================
+   ENHANCED BOOTSTRAP WRAPPER
+========================================================= */
+
+const originalBootstrapApp = bootstrapApp;
+bootstrapApp = function () {
+  applyEmbedSafePolish();
+  preventBrokenDragDefaults();
+  applyTeamsSharePointFriendlySizing();
+
+  originalBootstrapApp();
+
+  renderModeUI();
+  renderLineup();
+  renderLog();
+  renderDailyAssignments();
+  renderLunchSlots();
+  renderHandoffPreview();
+  updateDiagnostics();
+  updateHumanFriendlyStatusText();
+  refreshButtonStates();
+};
+
+/* =========================================================
+   POST-LOAD UX TUNE
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", function () {
+  applyEmbedSafePolish();
+  applyTeamsSharePointFriendlySizing();
+
+  setTimeout(function () {
+    updateDiagnostics();
+    updateHumanFriendlyStatusText();
+    refreshButtonStates();
+    renderHandoffPreview();
+  }, 150);
+
+  setTimeout(function () {
+    updateDiagnostics();
+    refreshButtonStates();
+  }, 800);
+});
+
+</script>
+
+</html>
